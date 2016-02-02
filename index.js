@@ -1,6 +1,7 @@
 var fs = require('fs'),
-	bunyanTcpStream = require('bunyan-logstash-tcp'),
-	prettify = require('./prettify');
+  fluentStream = require('effluent-logger'),
+  bunyanTcpStream = require('bunyan-logstash-tcp'),
+  prettify = require('./prettify');
 
 function fileStream(fileName) {
   var stream = fs.createWriteStream(fileName);
@@ -37,6 +38,13 @@ module.exports = function(opts) {
     streams.push({
       type: 'raw',
       stream: bunyanTcpStream.createStream(opts.logstash)
+    });
+  }
+
+  if (opts.fluentd) {
+    streams.push({
+      type: 'raw',
+      stream: new fluentStream(opts.fluentd)
     });
   }
 
