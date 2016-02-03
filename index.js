@@ -13,17 +13,32 @@ function fileStream(fileName) {
   };
 }
 
-function consoleStream() {
-  if (process.env.NODE_ENV !== 'production') {
+function getStream(opts) {
+  if (process.env.NODE_ENV === 'test') {
+    return fileStream(opts.fileName);
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return {
+      level: 'info',
+      stream: process.stdout
+    };
+  }
+
+  if (opts.fluentd) {
     return {
       type: 'raw',
-      level: 'error',
-      stream: prettify(process.stdout)
+      stream: new fluentStream(opts.fluentd)
+    };
+  } else if (opts.logstash) {
+    return {
+      type: 'raw',
+      stream: bunyanTcpStream.createStream(opts.logstash)
     };
   } else {
     return {
       level: 'info',
-      stream: process.stdout
+      stream: prettify(process.stdout)
     };
   }
 }
@@ -32,23 +47,5 @@ module.exports = function(opts) {
   opts = opts || {};
   opts.fileName = opts.fileName || 'test.log';
 
-  var streams = [];
-
-  if (opts.logstash) {
-    streams.push({
-      type: 'raw',
-      stream: bunyanTcpStream.createStream(opts.logstash)
-    });
-  }
-
-  if (opts.fluentd) {
-    streams.push({
-      type: 'raw',
-      stream: new fluentStream(opts.fluentd)
-    });
-  }
-
-  streams.push(process.env.NODE_ENV === 'test' ? fileStream(opts.fileName) : consoleStream());
-
-  return streams;
+  return [].concat(getStream(opts));
 };
